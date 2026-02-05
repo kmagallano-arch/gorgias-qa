@@ -161,6 +161,63 @@ function getGrade(s) {
   return s >= 95 ? 'A+' : s >= 90 ? 'A' : s >= 85 ? 'B+' : s >= 80 ? 'B' : s >= 75 ? 'C+' : s >= 70 ? 'C' : s >= 60 ? 'D' : 'F';
 }
 
+async function tagTicketAsGraded(ticketId) {
+  if (!GORGIAS_API_KEY || !GORGIAS_EMAIL) {
+    console.log('Gorgias API not configured - skipping tag');
+    return false;
+  }
+  
+  const auth = Buffer.from(`${GORGIAS_EMAIL}:${GORGIAS_API_KEY}`).toString('base64');
+  
+  try {
+    // First get existing tags
+    const ticketRes = await fetch(`https://${GORGIAS_DOMAIN}/api/tickets/${ticketId}`, {
+      headers: { 
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!ticketRes.ok) {
+      console.error('Failed to fetch ticket for tagging:', ticketRes.status);
+      return false;
+    }
+    
+    const ticket = await ticketRes.json();
+    const existingTags = ticket.tags || [];
+    const tagNames = existingTags.map(t => t.name || t);
+    
+    // Add qa-graded tag if not already present
+    if (!tagNames.includes('qa-graded')) {
+      tagNames.push('qa-graded');
+    }
+    
+    // Update ticket with new tags - this triggers "ticket-updated" event
+    const updateRes = await fetch(`https://${GORGIAS_DOMAIN}/api/tickets/${ticketId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tags: tagNames.map(name => ({ name }))
+      })
+    });
+    
+    if (!updateRes.ok) {
+      const errorText = await updateRes.text();
+      console.error('Failed to tag ticket:', updateRes.status, errorText);
+      return false;
+    }
+    
+    console.log('Tagged ticket as qa-graded:', ticketId);
+    return true;
+  } catch (error) {
+    console.error('Error tagging ticket:', error);
+    return false;
+  }
+}
+
 async function createInternalNote(ticketId, agentName, finalScore, grade, feedback) {
   if (!GORGIAS_API_KEY || !GORGIAS_EMAIL) {
     console.log('Gorgias API not configured - skipping internal note');
@@ -374,6 +431,11 @@ async function processTicket(queueItem) {
         agent.suggestedFeedback || ''
       );
     }
+  }
+  
+  // Tag ticket as graded — triggers widget refresh in Gorgias sidebar
+  if (savedEvaluations.length > 0) {
+    await tagTicketAsGraded(ticketId);
   }
   
   return { 
