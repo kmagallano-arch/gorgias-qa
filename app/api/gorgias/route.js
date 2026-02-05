@@ -4,10 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const ticketId = searchParams.get('ticket_id');
-  
+async function handleRequest(ticketId) {
   const response = {
     ticket_id: ticketId,
     grader_url: `https://gorgias-qa.vercel.app?ticket_id=${ticketId}`,
@@ -77,10 +74,49 @@ export async function GET(request) {
     }
   }
   
+  return response;
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const ticketId = searchParams.get('ticket_id');
+  const response = await handleRequest(ticketId);
+  
   return Response.json(response, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
+  });
+}
+
+export async function POST(request) {
+  // Gorgias widgets send ticket data via POST body
+  let ticketId = null;
+  
+  try {
+    const body = await request.json();
+    ticketId = body?.ticket?.id || body?.ticket_id || null;
+  } catch (e) {
+    // If body parsing fails, try query params as fallback
+  }
+  
+  // Also check query params as fallback
+  if (!ticketId) {
+    const { searchParams } = new URL(request.url);
+    ticketId = searchParams.get('ticket_id');
+  }
+  
+  // Convert to string if it's a number
+  if (ticketId) ticketId = String(ticketId);
+  
+  const response = await handleRequest(ticketId);
+  
+  return Response.json(response, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     }
   });
@@ -90,7 +126,7 @@ export async function OPTIONS(request) {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     }
   });
