@@ -9,7 +9,23 @@ const GORGIAS_API_KEY = process.env.GORGIAS_API_KEY || '';
 const GORGIAS_EMAIL = process.env.GORGIAS_EMAIL || '';
 
 const escalationAgents = ['JB', 'Arche', 'Princess', 'Cess', 'Analie', 'Randel', 'Ardylyn'];
-const buzzwords = ['legal', 'lawyer', 'attorney', 'lawsuit', 'sue', 'court', 'chargeback', 'dispute charge', 'consumer affairs', 'consumer protection', 'ftc', 'federal trade', 'bbb', 'better business bureau', 'attorney general', 'small claims'];
+const buzzwords = [
+  // Legal/Threat Language
+  'legal', 'lawyer', 'attorney', 'lawsuit', 'sue', 'court', 'legal action',
+  // Fraud/Regulators
+  'fraud', 'police', 'regulators', 'consumer affairs', 'consumer protection', 'consumer agency',
+  'ftc', 'federal trade', 'bbb', 'better business bureau', 'attorney general',
+  // Chargebacks/Payment disputes
+  'chargeback', 'dispute charge', 'unauthorized charge', 'payment dispute',
+  // Safety/Hazard
+  'fire', 'smoke', 'overheating', 'injury', 'property damage', 'hazard', 'electric shock', 'sparks',
+  // Public exposure threats
+  'going public', 'social media', 'influencer', 'media mention', 'leave a review', 'post online',
+  // Manager/Beyond policy
+  'manager', 'supervisor', 'speak to someone else',
+  // Aggressive/Ultimatums
+  'ultimatum', 'final warning', 'last chance'
+];
 
 // Bot/automated senders to exclude from evaluation
 const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation'];
@@ -109,27 +125,113 @@ async function analyzeWithAI(conversationText, ticketId, detectedBuzzwords, agen
     return null;
   }
   
-  const prompt = `You are a QA analyst evaluating a customer support ticket. This ticket may have been handled by MULTIPLE agents.
+  const prompt = `You are a QA analyst evaluating a customer support ticket for an e-commerce company selling electronic products (dashcams, cleaning robots, vacuum cleaners, WiFi equipment). This ticket may have been handled by MULTIPLE agents. Evaluate each human agent separately.
 
-ZERO TOLERANCE POLICY (BUZZWORDS) - Legal threats requiring IMMEDIATE escalation:
-Legal/Lawyer/Attorney/Lawsuit/Sue/Court, Chargeback/Dispute charge, Consumer Affairs/FTC/BBB/Attorney General
+=== ESCALATION POLICY (ZERO TOLERANCE) ===
+Agents MUST immediately escalate when ANY of these triggers appear at ANY point in the conversation:
+- Legal/Threat Language: customer mentions or implies legal action, chargebacks, fraud, police, regulators
+- Safety/Hazard Issues: fire, smoke, overheating, electric shock, sparks, injury, property damage
+- Public Exposure Threats: threatens reviews, social media, "going public," influencer or media mention
+- Payment Risk: chargeback filed, unauthorized charge, payment dispute
+- Manager/Beyond Policy: customer pushes beyond policy, asks for supervisor, refuses standard resolution
+- Repeated Aggressive Behavior: multiple contacts for same issue, abusive tone, threats, ultimatums
 
-ESCALATION TEAM: ${escalationAgents.join(', ')} - evaluate their resolution quality, not escalation compliance.
+When escalation trigger is detected, agent MUST:
+1. Stop standard handling immediately
+2. Reassign ticket to Escalation Team
+3. Add internal note with reason for escalation and key customer wording
+4. NOT continue the conversation, troubleshoot, negotiate, or promise outcomes
+
+ESCALATION TEAM MEMBERS: ${escalationAgents.join(', ')} — evaluate their resolution quality, NOT escalation compliance.
+
+=== RETURN REQUEST SOP ===
+
+REASON: Change of Mind
+1. Acknowledge request, ask for return reason if not provided
+2. Request product photo if applicable
+3. Review photo, verify Shopify order, confirm if returnable
+4. If returnable: highlight product features, offer 15% partial refund to keep product
+5. If 15% declined calmly → offer 30% partial refund
+6. If 15% declined and customer is upset/angry → SKIP 30%, offer 40% + return instructions
+7. If 30% declined → offer 50% partial refund + return instructions
+8. If all declined → send return form, ask for tracking number
+9. On valid tracking received → process full refund
+
+REASON: Item Not As Described
+1. Acknowledge, ask for return reason if not provided
+2. Request clear photo of product (and packaging if relevant)
+3. Review photo, match scenario: same product different packaging / functionality issue / missing features / completely different from listing
+4. Use appropriate macro, offer 15% partial refund
+5. If 15% declined → offer free reshipment of upgraded version (if available)
+6. If reshipment declined → offer 30% partial refund
+7. If 30% declined → offer 50% partial refund
+8. Final resolution based on customer decision
+
+REASON: Received Damaged Product / Product Does Not Work
+1. Acknowledge, ask for photo showing damage
+2. Review photo carefully
+3. If NOT visibly defective: ask probing questions, provide troubleshooting steps, setup instructions, usage guidelines
+4. If resolved through troubleshooting → close ticket
+5. If DEFECTIVE confirmed: offer free replacement with tracking details
+6. If customer declines replacement → process full refund
+
+REASON: Did Not Order This
+- SUBSCRIPTION ORDER: confirm subscription details, offer partial refund, manage subscription (pause/cancel)
+- ONE-TIME PURCHASE: verify payment/billing/shipping details, offer 15% partial refund, escalate if declined
+
+REASON: Found Cheaper Item Elsewhere
+1. Acknowledge, state price matching is NOT supported
+2. Offer 40% partial refund to keep the product
+3. If declined → follow standard return eligibility flow
+
+=== CANCELLATION REQUEST SOP ===
+Follow standard cancellation process based on order status and fulfillment stage.
+
+=== RETURN SHIPPING POLICY ===
+We NEVER offer free return labels. Return shipping cost is ALWAYS shouldered by the customer. If an agent offers a free return label or promises to cover return shipping, this is a policy violation.
+
+=== EVALUATION CRITERIA ===
 
 AGENTS DETECTED: ${agents.join(', ') || 'Unknown'}
+DETECTED ESCALATION BUZZWORDS: ${detectedBuzzwords.join(', ') || 'None'}
 
 TICKET CONVERSATION:
 ${conversationText}
 
-Detected buzzwords: ${detectedBuzzwords.join(', ') || 'None'}
+Score each agent on these categories (1-5 per subcriteria):
 
-TOOLS UTILIZATION scoring:
-- Gorgias Usage: How well agent uses the helpdesk platform
-- Internal Notes: Quality of internal documentation
-- Shopify Usage: Did agent correctly perform actions in Shopify?
+1. SOFT SKILLS (20% weight):
+   - Tone: Professional, warm, appropriate for situation
+   - Empathy: Acknowledges customer feelings and frustration
+   - Professionalism: Maintains composure, no defensive or dismissive language
+   - Clarity: Clear, concise communication without jargon
+
+2. ISSUE UNDERSTANDING (30% weight):
+   - Correct Identification: Accurately identifies the customer's issue type and return reason
+   - Root Cause Analysis: Understands underlying problem, asks the right probing questions
+   - Customer Context: Reviews order history, checks Shopify details, considers full picture
+   - Escalation Recognition: Identifies escalation triggers promptly when they appear
+
+3. PRODUCT & PROCESS (30% weight):
+   - Policy Accuracy: Follows correct SOP for the specific return reason / issue type
+   - SOP Adherence: Follows the step-by-step process in order (e.g., 15% → 30% → 50% for change of mind, NOT skipping steps or offering wrong percentages)
+   - Solution Correctness: Offers the right resolution at the right time (e.g., replacement for defective, partial refund tiers for change of mind)
+   - Escalation Process: When triggers present, properly reassigns to escalation team with internal note (or correctly does NOT escalate when triggers are absent)
+
+4. TOOLS UTILIZATION (20% weight):
+   - Gorgias Usage: Proper use of macros, tags, ticket status management
+   - Internal Notes: Quality of internal documentation and notes for team context
+   - Shopify Usage: Correctly performs actions in Shopify (refunds, replacements, order verification)
+
+CRITICAL EVALUATION RULES:
+- If escalation trigger was present and agent did NOT escalate → score Escalation Recognition and Escalation Process as 1/5 each
+- If agent skipped partial refund steps (e.g., jumped from 15% to 50%) → score SOP Adherence as 2/5 or lower
+- If agent offered wrong resolution for the return reason → score Solution Correctness as 2/5 or lower
+- If customer was clearly upset and agent offered 30% instead of skipping to 40% → note this in feedback
+- If agent offered a free return label or promised to cover return shipping → score Policy Accuracy as 1/5 and flag as a policy violation in violationNotes. Return shipping is ALWAYS at the customer's expense.
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
-{"ticketId":"${ticketId}","agents":[{"agentName":"Name","isEscalationAgent":false,"zeroToleranceViolation":false,"violationNotes":"","scores":{"softSkills":{"tone":{"score":1-5,"explanation":"why"},"empathy":{"score":1-5,"explanation":"why"},"professionalism":{"score":1-5,"explanation":"why"},"clarity":{"score":1-5,"explanation":"why"}},"issueUnderstanding":{"correctIdentification":{"score":1-5,"explanation":"why"},"rootCauseAnalysis":{"score":1-5,"explanation":"why"},"customerContext":{"score":1-5,"explanation":"why"},"escalationRecognition":{"score":1-5,"explanation":"why"}},"productProcess":{"policyAccuracy":{"score":1-5,"explanation":"why"},"sopAdherence":{"score":1-5,"explanation":"why"},"solutionCorrectness":{"score":1-5,"explanation":"why"},"escalationProcess":{"score":1-5,"explanation":"why"}},"toolsUtilization":{"gorgiasUsage":{"score":1-5,"explanation":"why"},"internalNotes":{"score":1-5,"explanation":"why"},"shopifyUsage":{"score":1-5,"explanation":"why"}}},"overallAnalysis":"analysis","suggestedFeedback":"coaching"}]}`;
+{"ticketId":"${ticketId}","agents":[{"agentName":"Name","isEscalationAgent":false,"zeroToleranceViolation":false,"violationNotes":"","scores":{"softSkills":{"tone":{"score":1,"explanation":"why"},"empathy":{"score":1,"explanation":"why"},"professionalism":{"score":1,"explanation":"why"},"clarity":{"score":1,"explanation":"why"}},"issueUnderstanding":{"correctIdentification":{"score":1,"explanation":"why"},"rootCauseAnalysis":{"score":1,"explanation":"why"},"customerContext":{"score":1,"explanation":"why"},"escalationRecognition":{"score":1,"explanation":"why"}},"productProcess":{"policyAccuracy":{"score":1,"explanation":"why"},"sopAdherence":{"score":1,"explanation":"why"},"solutionCorrectness":{"score":1,"explanation":"why"},"escalationProcess":{"score":1,"explanation":"why"}},"toolsUtilization":{"gorgiasUsage":{"score":1,"explanation":"why"},"internalNotes":{"score":1,"explanation":"why"},"shopifyUsage":{"score":1,"explanation":"why"}}},"overallAnalysis":"analysis","suggestedFeedback":"coaching"}]}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
