@@ -11,6 +11,15 @@ const GORGIAS_EMAIL = process.env.GORGIAS_EMAIL || '';
 const escalationAgents = ['JB', 'Arche', 'Princess', 'Cess', 'Analie', 'Randel', 'Ardylyn'];
 const buzzwords = ['legal', 'lawyer', 'attorney', 'lawsuit', 'sue', 'court', 'chargeback', 'dispute charge', 'consumer affairs', 'consumer protection', 'ftc', 'federal trade', 'bbb', 'better business bureau', 'attorney general', 'small claims'];
 
+// Bot/automated senders to exclude from evaluation
+const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation'];
+
+function isBot(name) {
+  if (!name) return false;
+  const lower = name.toLowerCase().trim();
+  return botNames.some(bot => lower.includes(bot)) || lower.endsWith('(bot)');
+}
+
 async function fetchTicketFromGorgias(ticketId) {
   if (!GORGIAS_API_KEY || !GORGIAS_EMAIL) {
     console.log('Gorgias API not configured');
@@ -60,12 +69,19 @@ async function fetchTicketFromGorgias(ticketId) {
 }
 
 function buildConversationText(messages) {
-  return messages.map(msg => {
-    const sender = msg.sender?.type === 'customer' ? 'Customer' : (msg.sender?.name || msg.sender?.email || 'Agent');
-    const body = msg.body_text || msg.stripped_text || (msg.body_html ? msg.body_html.replace(/<[^>]*>/g, '') : '');
-    const date = msg.created_datetime ? new Date(msg.created_datetime).toLocaleString() : '';
-    return `[${date}] ${sender}:\n${body}`;
-  }).join('\n\n---\n\n');
+  return messages
+    .filter(msg => {
+      // Exclude bot/automated messages from the conversation
+      const name = msg.sender?.name || msg.sender?.email || '';
+      if (msg.sender?.type === 'agent' && isBot(name)) return false;
+      return true;
+    })
+    .map(msg => {
+      const sender = msg.sender?.type === 'customer' ? 'Customer' : (msg.sender?.name || msg.sender?.email || 'Agent');
+      const body = msg.body_text || msg.stripped_text || (msg.body_html ? msg.body_html.replace(/<[^>]*>/g, '') : '');
+      const date = msg.created_datetime ? new Date(msg.created_datetime).toLocaleString() : '';
+      return `[${date}] ${sender}:\n${body}`;
+    }).join('\n\n---\n\n');
 }
 
 function extractAgents(messages) {
@@ -73,7 +89,7 @@ function extractAgents(messages) {
   messages.forEach(msg => {
     if (msg.sender?.type === 'agent' || msg.from_agent) {
       const name = msg.sender?.name || msg.sender?.email || 'Unknown Agent';
-      if (name && name !== 'Unknown Agent') {
+      if (name && name !== 'Unknown Agent' && !isBot(name)) {
         agentSet.add(name);
       }
     }
@@ -315,6 +331,12 @@ async function processTicket(queueItem) {
   const savedEvaluations = [];
   
   for (const agent of analysis.agents) {
+    // Skip bot agents that AI may have included
+    if (isBot(agent.agentName)) {
+      console.log('Skipping bot agent:', agent.agentName);
+      continue;
+    }
+    
     const softSkills = {
       tone: agent.scores?.softSkills?.tone?.score || 3,
       empathy: agent.scores?.softSkills?.empathy?.score || 3,
