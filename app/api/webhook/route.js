@@ -10,14 +10,44 @@ export async function POST(request) {
     
     console.log('Webhook received:', JSON.stringify(body).substring(0, 500));
     
-    // Gorgias sends different event formats
-    // Check for ticket status change to closed
-    const ticket = body.ticket || body;
-    const ticketId = ticket.id?.toString();
-    const status = ticket.status;
-    const eventType = body.event || body.type;
+    // Gorgias HTTP integration sends {"ticket_id": "123456"}
+    // Extract ticket ID from various possible formats
+    const ticketId = body.ticket_id?.toString() || body.ticket?.id?.toString() || body.id?.toString();
     
-    console.log('Parsed webhook:', { ticketId, status, eventType });
+    console.log('Parsed webhook: ticketId=', ticketId);
+    
+    if (!ticketId) {
+      console.log('No ticket ID found in payload');
+      return Response.json({ error: 'No ticket ID found', received: body }, { status: 400 });
+    }
+    
+    // Fetch ticket data from Gorgias to check status
+    const GORGIAS_DOMAIN = process.env.GORGIAS_DOMAIN;
+    const GORGIAS_API_KEY = process.env.GORGIAS_API_KEY;
+    const GORGIAS_EMAIL = process.env.GORGIAS_EMAIL;
+    
+    if (!GORGIAS_DOMAIN || !GORGIAS_API_KEY || !GORGIAS_EMAIL) {
+      console.log('Gorgias API not configured, queuing ticket anyway');
+    }
+    
+    let status = 'closed';
+    let ticket = { id: ticketId };
+    
+    if (GORGIAS_DOMAIN && GORGIAS_API_KEY && GORGIAS_EMAIL) {
+      try {
+        const auth = Buffer.from(`${GORGIAS_EMAIL}:${GORGIAS_API_KEY}`).toString('base64');
+        const ticketRes = await fetch(`https://${GORGIAS_DOMAIN}/api/tickets/${ticketId}`, {
+          headers: { 'Authorization': `Basic ${auth}` }
+        });
+        if (ticketRes.ok) {
+          ticket = await ticketRes.json();
+          status = ticket.status;
+          console.log('Fetched ticket status:', status);
+        }
+      } catch (fetchErr) {
+        console.log('Could not fetch ticket, using default status:', fetchErr.message);
+      }
+    }
     
     // Only process if ticket is closed
     if (status !== 'closed') {
