@@ -2,7 +2,7 @@ const GORGIAS_DOMAIN = process.env.GORGIAS_DOMAIN || 'osmozone.gorgias.com';
 const GORGIAS_API_KEY = process.env.GORGIAS_API_KEY || '';
 const GORGIAS_EMAIL = process.env.GORGIAS_EMAIL || '';
 const TEAM_LEAD_TEAM = 'Escalations';
-const ADMIN_EMAILS = ['karen@sethmedia.com', 'victor@sethmedia.com'];
+const ADMIN_EMAILS = ['karen@sethmedia.com', 'victor@sethmedia.com', 'ara.proctoru@gmail.com', 'jenantonio.lorezo@gmail.com'];
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(request) {
   }
 
   if (ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
-    const adminNames = { 'karen@sethmedia.com': 'Karen', 'victor@sethmedia.com': 'Victor Hansen' };
+    const adminNames = { 'karen@sethmedia.com': 'Karen', 'victor@sethmedia.com': 'Victor Hansen', 'ara.proctoru@gmail.com': 'Ara', 'jenantonio.lorezo@gmail.com': 'Jen' };
     return Response.json({ role: 'team_lead', name: adminNames[userEmail.toLowerCase()] || userEmail.split('@')[0], email: userEmail });
   }
 
