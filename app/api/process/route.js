@@ -270,7 +270,7 @@ CRITICAL EVALUATION RULES:
 - If agent offered a free return label or promised to cover return shipping → score Policy Accuracy as 1/5 and flag as a policy violation in violationNotes. Return shipping is ALWAYS at the customer's expense.
 
 Respond ONLY with valid JSON (no markdown, no code blocks):
-{"ticketId":"${ticketId}","agents":[{"agentName":"Name","isEscalationAgent":false,"zeroToleranceViolation":false,"violationNotes":"","scores":{"softSkills":{"tone":{"score":1,"explanation":"why"},"empathy":{"score":1,"explanation":"why"},"professionalism":{"score":1,"explanation":"why"},"clarity":{"score":1,"explanation":"why"}},"issueUnderstanding":{"correctIdentification":{"score":1,"explanation":"why"},"rootCauseAnalysis":{"score":1,"explanation":"why"},"customerContext":{"score":1,"explanation":"why"},"escalationRecognition":{"score":1,"explanation":"why"}},"productProcess":{"policyAccuracy":{"score":1,"explanation":"why"},"sopAdherence":{"score":1,"explanation":"why"},"solutionCorrectness":{"score":1,"explanation":"why"},"escalationProcess":{"score":1,"explanation":"why"}},"toolsUtilization":{"gorgiasUsage":{"score":1,"explanation":"why"},"internalNotes":{"score":1,"explanation":"why"},"shopifyUsage":{"score":1,"explanation":"why"}}},"overallAnalysis":"analysis","suggestedFeedback":"coaching"}]}`;
+{"ticketId":"${ticketId}","agents":[{"agentName":"Name","isEscalationAgent":false,"zeroToleranceViolation":false,"violationNotes":"","scores":{"softSkills":{"tone":{"score":1,"explanation":"why"},"empathy":{"score":1,"explanation":"why"},"professionalism":{"score":1,"explanation":"why"},"clarity":{"score":1,"explanation":"why"}},"issueUnderstanding":{"correctIdentification":{"score":1,"explanation":"why"},"rootCauseAnalysis":{"score":1,"explanation":"why"},"customerContext":{"score":1,"explanation":"why"},"escalationRecognition":{"score":1,"explanation":"why"}},"productProcess":{"policyAccuracy":{"score":1,"explanation":"why"},"sopAdherence":{"score":1,"explanation":"why"},"solutionCorrectness":{"score":1,"explanation":"why"},"escalationProcess":{"score":1,"explanation":"why"}},"toolsUtilization":{"gorgiasUsage":{"score":1,"explanation":"why"},"internalNotes":{"score":1,"explanation":"why"},"shopifyUsage":{"score":1,"explanation":"why"}}},"overallAnalysis":"analysis","suggestedFeedback":"coaching feedback for the agent","suggestedResponse":"write the ideal customer-facing reply the agent should have sent"}]}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -582,6 +582,7 @@ async function processTicket(queueItem) {
       grade: agent.zeroToleranceViolation ? 'F' : getGrade(finalScore),
       comments: agent.suggestedFeedback || '',
       ai_reasoning: agent.overallAnalysis || '',
+      suggested_response: agent.suggestedResponse || '',
       detected_buzzwords: detectedBuzzwords,
       manual_mode: false,
       auto_graded: true
