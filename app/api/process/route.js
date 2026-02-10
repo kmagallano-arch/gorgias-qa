@@ -31,7 +31,7 @@ const buzzwords = [
 const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation'];
 
 // Non-agent users to always skip (not support agents)
-const skipNames = ['mike', 'miguel', 'carlo', 'jayson', 'nea', 'jamaica', 'jen', 'ara', 'donna'];
+const skipNames = ['mike', 'miguel', 'carlo', 'jayson', 'nea', 'jamaica', 'jen', 'ara', 'donna', 'jeofrey', 'jeoffrey'];
 
 function isBot(name) {
   if (!name) return false;
