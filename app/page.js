@@ -182,8 +182,8 @@ export default function TicketGrader() {
   const getTimeRemaining=(p)=>{const d=new Date(p)-new Date();if(d<=0)return'Ready';return`${Math.floor(d/3600000)}h ${Math.floor((d%3600000)/60000)}m`;};
   const statusBadge=(st)=>{const s={pending:{bg:'rgba(245,158,11,0.15)',c:T.amber,l:'⏳ Pending'},processing:{bg:'rgba(59,130,246,0.15)',c:T.blue,l:'🔄 Processing'},completed:{bg:'rgba(34,197,94,0.15)',c:T.green,l:'✅ Completed'},failed:{bg:'rgba(239,68,68,0.15)',c:T.danger,l:'❌ Failed'}}[st]||{bg:'rgba(245,158,11,0.15)',c:T.amber,l:'⏳ Pending'};return <span style={{padding:'5px 14px',borderRadius:'20px',fontSize:'12px',fontWeight:'600',background:s.bg,color:s.c}}>{s.l}</span>;};
 
-  const uniqueAgents=[...new Set(allEvaluations.map(r=>r.agentName))].filter(Boolean);
-  const uniqueEvaluators=[...new Set(allEvaluations.map(r=>r.evaluatorName))].filter(Boolean);
+  const uniqueAgents=[...new Set(allEvaluations.map(r=>r.agentName))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  const uniqueEvaluators=[...new Set(allEvaluations.map(r=>r.evaluatorName))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
   const analytics=getAnalytics();
   const coaching=getCoachingAnalysis();
   const pendingCount=queueItems.filter(q=>q.status==='pending').length;
