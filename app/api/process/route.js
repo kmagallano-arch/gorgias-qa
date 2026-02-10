@@ -30,6 +30,9 @@ const buzzwords = [
 // Bot/automated senders to exclude from evaluation
 const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation'];
 
+// Non-agent users to always skip (not support agents)
+const skipNames = ['mike', 'miguel', 'carlo', 'jayson', 'nea'];
+
 function isBot(name) {
   if (!name) return false;
   const lower = name.toLowerCase().trim();
@@ -481,6 +484,12 @@ async function processTicket(queueItem) {
     // Skip inactive agents
     if (!isActiveAgent(agent.agentName, activeNames)) {
       console.log('Skipping inactive agent:', agent.agentName);
+      continue;
+    }
+
+    // Skip non-agent users
+    if (skipNames.includes(agent.agentName?.toLowerCase().trim())) {
+      console.log('Skipping non-agent user:', agent.agentName);
       continue;
     }
     
