@@ -28,7 +28,7 @@ const buzzwords = [
 ];
 
 // Bot/automated senders to exclude from evaluation
-const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation'];
+const botNames = ['gorgias bot', 'bot', 'ai agent', 'auto-reply', 'autoreply', 'noreply', 'no-reply', 'system', 'seth ai-qa', 'automation', 'no agent response', 'no agent found'];
 
 // Non-agent users to always skip (not support agents)
 const skipNames = ['mike', 'miguel', 'carlo', 'jayson', 'nea', 'jamaica', 'jen', 'ara', 'donna', 'jeofrey', 'jeoffrey'];
