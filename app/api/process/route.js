@@ -576,13 +576,13 @@ async function processTicket(queueItem) {
             shopifyUsage: agent.scores?.toolsUtilization?.shopifyUsage?.explanation || ''
           },
           categoryScore: calcScore(toolsUtilization)
-        }
+        },
+        suggestedResponse: agent.suggestedResponse || ''
       },
       final_score: finalScore,
       grade: agent.zeroToleranceViolation ? 'F' : getGrade(finalScore),
       comments: agent.suggestedFeedback || '',
       ai_reasoning: agent.overallAnalysis || '',
-      suggested_response: agent.suggestedResponse || '',
       detected_buzzwords: detectedBuzzwords,
       manual_mode: false,
       auto_graded: true
