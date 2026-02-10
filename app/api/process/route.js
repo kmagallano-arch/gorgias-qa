@@ -36,6 +36,42 @@ function isBot(name) {
   return botNames.some(bot => lower.includes(bot)) || lower.endsWith('(bot)');
 }
 
+// Cache active agent names (refreshed each cron run)
+let activeAgentNamesCache = null;
+
+async function fetchActiveAgentNames() {
+  if (activeAgentNamesCache) return activeAgentNamesCache;
+  if (!GORGIAS_API_KEY || !GORGIAS_EMAIL) return null;
+
+  const auth = Buffer.from(`${GORGIAS_EMAIL}:${GORGIAS_API_KEY}`).toString('base64');
+  try {
+    const res = await fetch(`https://${GORGIAS_DOMAIN}/api/users?limit=100`, {
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const users = data.data || data;
+    // Only include active, non-bot users
+    activeAgentNamesCache = users
+      .filter(u => u.active && u.role?.name !== 'bot' && u.role?.name !== 'internal-agent')
+      .map(u => {
+        const name = [u.firstname, u.lastname].filter(Boolean).join(' ').trim();
+        return name || u.email;
+      });
+    console.log('Active agents loaded:', activeAgentNamesCache.length);
+    return activeAgentNamesCache;
+  } catch (e) {
+    console.error('Failed to fetch active agents:', e.message);
+    return null;
+  }
+}
+
+function isActiveAgent(name, activeNames) {
+  if (!activeNames || activeNames.length === 0) return true; // if fetch failed, don't block
+  const lower = name.toLowerCase().trim();
+  return activeNames.some(a => lower.includes(a.toLowerCase()) || a.toLowerCase().includes(lower));
+}
+
 async function fetchTicketFromGorgias(ticketId) {
   if (!GORGIAS_API_KEY || !GORGIAS_EMAIL) {
     console.log('Gorgias API not configured');
@@ -429,13 +465,22 @@ async function processTicket(queueItem) {
     return { success: false, error: 'AI analysis failed or returned no agents' };
   }
   
+  // Fetch active agent list to skip inactive users
+  const activeNames = await fetchActiveAgentNames();
+
   // Save evaluations for each agent
   const savedEvaluations = [];
-  
+
   for (const agent of analysis.agents) {
     // Skip bot agents that AI may have included
     if (isBot(agent.agentName)) {
       console.log('Skipping bot agent:', agent.agentName);
+      continue;
+    }
+
+    // Skip inactive agents
+    if (!isActiveAgent(agent.agentName, activeNames)) {
+      console.log('Skipping inactive agent:', agent.agentName);
       continue;
     }
     
@@ -586,7 +631,8 @@ export async function GET(request) {
   
   try {
     const now = new Date().toISOString();
-    
+    activeAgentNamesCache = null; // refresh active agents each cron run
+
     console.log('Processing queue at:', now);
     
     // Get pending tickets that are ready to process
