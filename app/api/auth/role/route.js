@@ -2,7 +2,7 @@ const GORGIAS_DOMAIN = process.env.GORGIAS_DOMAIN || 'osmozone.gorgias.com';
 const GORGIAS_API_KEY = process.env.GORGIAS_API_KEY || '';
 const GORGIAS_EMAIL = process.env.GORGIAS_EMAIL || '';
 const TEAM_LEAD_TEAM = 'Escalations';
-const ADMIN_EMAILS = ['karen@sethmedia.com', 'victor@sethmedia.com', 'ara.proctoru@gmail.com', 'jenantonio.lorezo@gmail.com', 'lorezojen0713@gmail.com', 'jamaica@sethmedia.com', 'locasiadonna23@gmail.com', 'sojormikenico1998@gmail.com', 'nicholassalva29@gmail.com'];
+const ADMIN_EMAILS = ['karen@sethmedia.com', 'victor@sethmedia.com', 'ara.proctoru@gmail.com', 'jenantonio.lorezo@gmail.com', 'lorezojen0713@gmail.com', 'jamaica@sethmedia.com', 'locasiadonna23@gmail.com', 'sojormikenico1998@gmail.com', 'nicholassalva29@gmail.com', 'vsh@victorhansen.com'];
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(request) {
   }
 
   if (ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
-    const adminNames = { 'karen@sethmedia.com': 'Karen', 'victor@sethmedia.com': 'Victor Hansen', 'ara.proctoru@gmail.com': 'Ara', 'jenantonio.lorezo@gmail.com': 'Jen', 'lorezojen0713@gmail.com': 'Jen', 'jamaica@sethmedia.com': 'Jamaica', 'locasiadonna23@gmail.com': 'Donna', 'sojormikenico1998@gmail.com': 'Mike', 'nicholassalva29@gmail.com': 'Nicholas' };
+    const adminNames = { 'karen@sethmedia.com': 'Karen', 'victor@sethmedia.com': 'Victor Hansen', 'ara.proctoru@gmail.com': 'Ara', 'jenantonio.lorezo@gmail.com': 'Jen', 'lorezojen0713@gmail.com': 'Jen', 'jamaica@sethmedia.com': 'Jamaica', 'locasiadonna23@gmail.com': 'Donna', 'sojormikenico1998@gmail.com': 'Mike', 'nicholassalva29@gmail.com': 'Nicholas', 'vsh@victorhansen.com': 'Victor Hansen' };
     return Response.json({ role: 'team_lead', name: adminNames[userEmail.toLowerCase()] || userEmail.split('@')[0], email: userEmail });
   }
 
